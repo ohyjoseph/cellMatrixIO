@@ -96,31 +96,54 @@ function stringMatrixUpdateAll (string) {
   return matrixToString(updateAllCells(stringToMatrix(string)));
 }
 
-function matrixUpdateLoop (bytesPerRow, numberOfLines) {
-  // countReadStream.on('data', (chunk) => {
-  //   chunkArray = chunk.split('\n');
-  //   numberOfLines += chunkArray.length - 3
-  //   bytesPerRow = chunkArray[0].length;
+async function matrixUpdateLoop () {
+  // Getting bytesPerRow and the numberOfLines of file
+  let metaObject = await readStreamMetaPromise('/readMe.txt');
+  bytesPerRow = metaObject.bytesPerRow;
+  numberOfLines = metaObject.numberOfLines;
+
   let myWriteStream = fs.createWriteStream(__dirname + '/writeMe.txt');
   let count = 0;
 
   for (let lineNumber = 0; lineNumber <= numberOfLines - 2; lineNumber++) {
-    let myReadStream = fs.createReadStream(__dirname + '/readMe.txt', {encoding: 'utf8', start: bytesPerRow * lineNumber, end: (bytesPerRow * lineNumber + bytesPerRow * 3) - 1});
-    myReadStream.on('data', async (chunk) => {
-      console.log('CHUNKS: ', lineNumber);
-      console.log(chunk + '\n\n');
-      if (lineNumber === 0) {
-        await myWriteStream.write(count++ + ' ' + stringMatrixUpdateTop(chunk));
-      } 
-      await myWriteStream.write(count++ + ' ' + stringMatrixUpdateMiddle(chunk));
-      if (lineNumber === numberOfLines - 2) {
-        await myWriteStream.write(count++ + ' ' + stringMatrixUpdateBottom(chunk));
-      }
-    });
+    let chunk = await readStreamChunkPromise('/readMe.txt', bytesPerRow, lineNumber);
+    
+    if (lineNumber === 0) {
+      myWriteStream.write(count++ + ' ' + stringMatrixUpdateTop(chunk));
+    } 
+    myWriteStream.write(count++ + ' ' + stringMatrixUpdateMiddle(chunk));
+    if (lineNumber === numberOfLines - 2) {
+      myWriteStream.write(count++ + ' ' + stringMatrixUpdateBottom(chunk));
+    }
   }
 }
 
-matrixUpdateLoop(180, 10);
+function readStreamMetaPromise(fileName) {
+  return new Promise((resolve) => {
+    let numberOfLines = 0;
+    let bytesPerRow;
+    let myReadStream = fs.createReadStream(__dirname + fileName, 'utf8');
+    myReadStream.on('data', (chunk) => {
+      chunkArray = chunk.split('\n');
+      numberOfLines += chunkArray.length - 3
+      bytesPerRow = chunkArray[0].length + 1;
+      resolve({numberOfLines: numberOfLines, bytesPerRow: bytesPerRow});
+    });
+  });
+}
+
+function readStreamChunkPromise(fileName, bytesPerRow, lineNumber) {
+  return new Promise((resolve) => {
+    let myReadStream = fs.createReadStream(__dirname + fileName, {encoding: 'utf8', start: bytesPerRow * lineNumber, end: (bytesPerRow * lineNumber + bytesPerRow * 3) - 1});
+    myReadStream.on('data', (chunk) => {
+      console.log('CHUNKS: ', lineNumber);
+      console.log(chunk + '\n\n');
+      resolve(chunk);
+    });
+  });
+}
+
+matrixUpdateLoop();
 // console.log(updateAllCells([
 //   [0,1,1,1,0,1,0],
 //   [1,1,1,1,1,1,0],
