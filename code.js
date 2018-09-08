@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-
+//================================ Matrix algorithm ============================================
 function updateAllCells (matrix) {
   let matrixCopy = JSON.parse(JSON.stringify(matrix));
   for (let i = 0; i < matrix.length; i++) {
@@ -96,6 +96,35 @@ function stringMatrixUpdateAll (string) {
   return matrixToString(updateAllCells(stringToMatrix(string)));
 }
 
+//================================ Read/Write ============================================
+function readStreamLinesPromise() {
+  let lineCount = 0;
+  return new Promise((resolve) => {
+    fs.createReadStream(__dirname + '/readMe.txt')
+      .on('data', function(chunk) {
+        for (let i = 0; i < chunk.length; i++) {
+          if (chunk[i] === 10) {
+            lineCount++;
+          }
+        }
+      })
+      .on('end', function() {
+        resolve(lineCount);
+      });
+  });
+}
+
+function readStreamChunkPromise(fileName, bytesPerRow, lineNumber) {
+  return new Promise((resolve) => {
+    let myReadStream = fs.createReadStream(__dirname + fileName, {encoding: 'utf8', start: bytesPerRow * lineNumber, end: (bytesPerRow * lineNumber + bytesPerRow * 3) - 1});
+    myReadStream.on('data', (chunk) => {
+      console.log('CHUNKS: ', lineNumber);
+      console.log(chunk + '\n\n');
+      resolve(chunk);
+    });
+  });
+}
+
 async function matrixUpdateLoop (cellsPerRow) {
   let bytesPerRow = cellsPerRow * 2;
   let numberOfLines = await readStreamLinesPromise() - 1;
@@ -113,34 +142,6 @@ async function matrixUpdateLoop (cellsPerRow) {
       myWriteStream.write(count++ + ' ' + stringMatrixUpdateBottom(chunk));
     }
   }
-}
-
-function readStreamLinesPromise() {
-  let lineCount = 0;
-  return new Promise((resolve) => {
-    fs.createReadStream(__dirname + '/readMe.txt')
-      .on('data', function(chunk) {
-        for (let i = 0; i < chunk.length; i++) {
-          if (chunk[i] === 10) {
-            lineCount++;
-          }
-        }
-      })
-      .on('end', function() {
-        resolve(lineCount);
-      });
-  });
-}
-readStreamLinesPromise()
-function readStreamChunkPromise(fileName, bytesPerRow, lineNumber) {
-  return new Promise((resolve) => {
-    let myReadStream = fs.createReadStream(__dirname + fileName, {encoding: 'utf8', start: bytesPerRow * lineNumber, end: (bytesPerRow * lineNumber + bytesPerRow * 3) - 1});
-    myReadStream.on('data', (chunk) => {
-      console.log('CHUNKS: ', lineNumber);
-      console.log(chunk + '\n\n');
-      resolve(chunk);
-    });
-  });
 }
 
 matrixUpdateLoop(90);
